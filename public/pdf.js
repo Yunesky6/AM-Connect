@@ -4,6 +4,14 @@
 //
 // Walks the same form definition (public/forms.js) used to render the form,
 // so any new form added there gets a matching PDF automatically.
+//
+// Saving: jsPDF's own doc.save() works by faking a click on a blob-URL <a
+// download> link. That's reliable on desktop and Android, but installed
+// (home-screen) PWAs on iOS Safari have no download manager for it to save
+// into — the "file" it produces there is frequently empty or unopenable.
+// The fix is to hand the PDF to the OS Share Sheet via the Web Share API
+// when it's available (which is exactly the case that covers iOS), and only
+// fall back to the anchor-download trick where Web Share isn't supported.
 
 const BRAND_BLUE = [0, 85, 165];
 const BRAND_YELLOW = [255, 224, 0];
@@ -31,7 +39,7 @@ function fieldLabelFor(field) {
 // Flattens a form's sections/fields into a simple list of {label, value} rows,
 // plus separately-collected checkgroups and the signature, using the same
 // `data` object collectFormData() produces.
-function generatePDF(formDef, data) {
+async function generatePDF(formDef, data) {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit: 'pt', format: 'letter' });
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -119,6 +127,21 @@ function generatePDF(formDef, data) {
   const safeProject = (data.projectName || data.title || data.site || 'submission').replace(/[^a-z0-9]+/gi, '_');
   const dateStr = new Date(data.submittedAt || Date.now()).toISOString().slice(0, 10);
   const filename = `${safeTitle}_${safeProject}_${dateStr}.pdf`;
+
+  // Prefer the Share Sheet (covers iOS reliably) when the platform supports
+  // sharing files; otherwise fall back to the classic download link.
+  try {
+    const blob = doc.output('blob');
+    const file = new File([blob], filename, { type: 'application/pdf' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ files: [file], title: filename });
+      return;
+    }
+  } catch (e) {
+    // AbortError means the user just dismissed the share sheet — not a
+    // failure. Any other error falls through to the download fallback.
+    if (e && e.name === 'AbortError') return;
+  }
 
   doc.save(filename);
 }

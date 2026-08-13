@@ -78,6 +78,33 @@ const TINY_PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1
       }
     });
 
+    // --- Simulate iOS Safari: Web Share API available, no anchor-download ---
+    // This is the actual fix for "saved PDF won't open on iPhone" — verify
+    // generatePDF hands the PDF to navigator.share() as a real File with
+    // PDF content, instead of relying on the unreliable download trick.
+    let sharedWith = null;
+    window.navigator.canShare = (opts) => !!(opts && opts.files && opts.files.length > 0);
+    window.navigator.share = async (opts) => { sharedWith = opts; };
+    savedFilename = null; // should NOT get used when Web Share succeeds
+    const shareTestForm = window.FORMS[0];
+    const shareTestData = fakeDataFor(shareTestForm);
+    await window.generatePDF(shareTestForm, shareTestData);
+    console.log('Web Share path -> shared:', !!sharedWith, '| files:', sharedWith && sharedWith.files.length, '| filename:', sharedWith && sharedWith.files[0].name, '| type:', sharedWith && sharedWith.files[0].type, '| size:', sharedWith && sharedWith.files[0].size, 'bytes');
+    if (!sharedWith || !sharedWith.files || sharedWith.files.length !== 1) {
+      allPassed = false;
+      console.error('FAIL: navigator.share was not called with a file');
+    } else {
+      const f = sharedWith.files[0];
+      if (f.type !== 'application/pdf' || f.size < 500 || !f.name.endsWith('.pdf')) {
+        allPassed = false;
+        console.error('FAIL: shared file is not a valid-looking PDF');
+      }
+      if (savedFilename) {
+        allPassed = false;
+        console.error('FAIL: doc.save() download fallback ran even though Web Share succeeded');
+      }
+    }
+
     if (!allPassed) throw new Error('one or more forms failed PDF generation');
     console.log('RESULT: PASS');
   } catch (e) {

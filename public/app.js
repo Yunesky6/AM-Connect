@@ -552,7 +552,7 @@ document.getElementById('submitBtn').addEventListener('click', async () => {
   // Always generate a local PDF copy — this is the fallback for techs with
   // no connectivity at all, who can save it and email it manually later.
   try {
-    generatePDF(currentForm, data);
+    await generatePDF(currentForm, data);
   } catch (e) {
     console.error('PDF generation failed', e);
   }
