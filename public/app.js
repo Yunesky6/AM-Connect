@@ -57,6 +57,32 @@ async function idbDelete(key) {
   });
 }
 
+// IndexedDB has known quirks on some mobile browsers (notably iOS Safari in
+// installed-PWA mode) where a request can reject or, worse, simply hang
+// forever. Storage helpers below always go through this so a bad storage
+// call degrades to "no draft found" instead of freezing the UI.
+function withTimeout(promise, ms, fallback) {
+  return new Promise((resolve) => {
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (!settled) { settled = true; resolve(fallback); }
+    }, ms);
+    promise.then(
+      (val) => { if (!settled) { settled = true; clearTimeout(timer); resolve(val); } },
+      () => { if (!settled) { settled = true; clearTimeout(timer); resolve(fallback); } }
+    );
+  });
+}
+async function safeIdbGet(key, fallback) {
+  return withTimeout(idbGet(key, fallback), 3000, fallback);
+}
+async function safeIdbSet(key, value) {
+  return withTimeout(idbSet(key, value).then(() => true), 3000, false);
+}
+async function safeIdbDelete(key) {
+  return withTimeout(idbDelete(key).then(() => true), 3000, false);
+}
+
 // ---------- Elements ----------
 const homeView = document.getElementById('homeView');
 const formView = document.getElementById('formView');
@@ -170,7 +196,7 @@ function renderForm(formDef) {
 
   // Wire up signature pad, if this form has one
   const canvas = activeFormEl.querySelector('#sigPad');
-  if (canvas) {
+  if (canvas && canvas.getContext('2d')) {
     currentCanvas = canvas;
     currentCtx = canvas.getContext('2d');
     hasSignature = false;
@@ -311,7 +337,13 @@ async function openForm(id) {
   if (!formDef) return;
   currentForm = formDef;
   renderForm(formDef);
-  await loadDraft(formDef);
+  try {
+    await loadDraft(formDef);
+  } catch (e) {
+    // A storage failure should never block opening the form itself —
+    // worst case, any saved draft just doesn't come back.
+    console.error('Failed to load draft', e);
+  }
   updateProgress();
 
   homeView.style.display = 'none';
@@ -364,19 +396,19 @@ async function resetForm(formDef) {
   activeFormEl.querySelectorAll('.photo-field').forEach((container) => {
     renderPhotoGrid(container, container.dataset.photo);
   });
-  await idbDelete(draftKey(formDef.id));
+  await safeIdbDelete(draftKey(formDef.id));
   updateProgress();
 }
 
 // ---------- Draft save/load ----------
 document.getElementById('saveDraftBtn').addEventListener('click', async () => {
   if (!currentForm) return;
-  await idbSet(draftKey(currentForm.id), collectFormData(currentForm));
-  toast('Draft saved on this device');
+  const ok = await safeIdbSet(draftKey(currentForm.id), collectFormData(currentForm));
+  toast(ok ? 'Draft saved on this device' : 'Could not save draft — storage unavailable right now');
 });
 
 async function loadDraft(formDef) {
-  const data = await idbGet(draftKey(formDef.id), null);
+  const data = await safeIdbGet(draftKey(formDef.id), null);
   if (!data) return;
   try {
     // Plain inputs/selects/textareas
@@ -449,10 +481,10 @@ function toast(msg) {
 
 // ---------- Queue (offline submissions, shared across all forms) ----------
 async function getQueue() {
-  return idbGet(QUEUE_KEY, []);
+  return safeIdbGet(QUEUE_KEY, []);
 }
 async function setQueue(q) {
-  await idbSet(QUEUE_KEY, q);
+  await safeIdbSet(QUEUE_KEY, q);
   renderQueue();
 }
 

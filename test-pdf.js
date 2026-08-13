@@ -13,10 +13,11 @@ const TINY_PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1
 
   const jspdfSrc = fs.readFileSync(path.join(__dirname, 'public/vendor/jspdf.umd.min.js'), 'utf8');
   const formsSrc = fs.readFileSync(path.join(__dirname, 'public/forms.js'), 'utf8');
+  const logoSrc = fs.readFileSync(path.join(__dirname, 'public/logo.js'), 'utf8');
   const pdfSrc = fs.readFileSync(path.join(__dirname, 'public/pdf.js'), 'utf8');
 
   try {
-    dom.window.eval(`${jspdfSrc}\n${formsSrc}\n${pdfSrc}\nwindow.FORMS = FORMS; window.generatePDF = generatePDF;`);
+    dom.window.eval(`${jspdfSrc}\n${formsSrc}\n${logoSrc}\n${pdfSrc}\nwindow.FORMS = FORMS; window.generatePDF = generatePDF;`);
 
     // jsdom has no browser blob-download machinery, and that's not what this
     // test is checking. Swap in a wrapper around the jsPDF constructor so

@@ -38,15 +38,21 @@ function generatePDF(formDef, data) {
     }
   }
 
-  // Header
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(18);
-  doc.setTextColor(26, 58, 94);
-  doc.text('AM Connect', margin, y);
+  // Header — company logo top-left, form title top-right
+  let headerBottom = y;
+  if (typeof AURORA_LOGO_DATA_URI !== 'undefined') {
+    const logoW = 110;
+    const logoH = logoW / AURORA_LOGO_ASPECT;
+    try {
+      doc.addImage(AURORA_LOGO_DATA_URI, 'PNG', margin, y - 14, logoW, logoH);
+      headerBottom = Math.max(headerBottom, y - 14 + logoH);
+    } catch (e) { /* fall back silently if the logo fails to embed */ }
+  }
+  doc.setFont('helvetica', 'normal');
   doc.setFontSize(12);
   doc.setTextColor(80, 80, 80);
   doc.text(formDef.title, pageWidth - margin, y, { align: 'right' });
-  y += 18;
+  y = headerBottom + 10;
   doc.setDrawColor(200, 200, 200);
   doc.line(margin, y, pageWidth - margin, y);
   y += 20;

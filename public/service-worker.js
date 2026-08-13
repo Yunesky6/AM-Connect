@@ -1,9 +1,10 @@
-const CACHE_NAME = 'am-connect-v7';
+const CACHE_NAME = 'am-connect-v9';
 const APP_SHELL = [
   '/',
   '/index.html',
   '/app.js',
   '/forms.js',
+  '/logo.js',
   '/pdf.js',
   '/vendor/jspdf.umd.min.js',
   '/manifest.json',

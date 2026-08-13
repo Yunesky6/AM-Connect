@@ -23,7 +23,7 @@ const TINY_JPEG = fs.readFileSync('/tmp/tiny_jpeg.txt', 'utf8').trim();
   // without duplicating app.js's own DOM-dependent init code (it expects
   // the full index.html structure to be present, which isn't the point here).
   const exposed = src
-    .replace('// ---------- Elements ----------', 'window.idbGet = idbGet; window.idbSet = idbSet; window.idbDelete = idbDelete;\n// ---------- Elements ----------')
+    .replace('// ---------- Elements ----------', 'window.idbGet = idbGet; window.idbSet = idbSet; window.idbDelete = idbDelete; window.safeIdbGet = safeIdbGet; window.withTimeout = withTimeout;\n// ---------- Elements ----------')
     .split('// ---------- Elements ----------')[0]; // only take the storage-layer portion, before DOM element lookups
 
   try {
@@ -65,6 +65,25 @@ const TINY_JPEG = fs.readFileSync('/tmp/tiny_jpeg.txt', 'utf8').trim();
   } catch (e) {
     failed = true;
     console.error('Storage test error:', e.stack || e.message);
+  }
+
+  // --- Test 2.5: a hung IndexedDB call must not block forever ---
+  // Regression test for the actual bug reported: on some mobile browsers
+  // IndexedDB requests can hang instead of erroring, which used to freeze
+  // the "open form" flow entirely since loadDraft() awaited it unprotected.
+  try {
+    const neverResolves = new Promise(() => {}); // simulates a hung IDB request
+    const start = Date.now();
+    const result = await window.withTimeout(neverResolves, 500, 'fallback-used');
+    const elapsed = Date.now() - start;
+    console.log(`withTimeout on a hung promise resolved to "${result}" after ${elapsed}ms`);
+    if (result !== 'fallback-used' || elapsed > 1000) {
+      failed = true;
+      console.error('FAIL: withTimeout did not fall back promptly for a hung promise');
+    }
+  } catch (e) {
+    failed = true;
+    console.error('Hung-promise test error:', e.stack || e.message);
   }
 
   // --- Test 3: PDF generation with a 'photo' field ---

@@ -58,6 +58,10 @@ async function wait(ms) { return new Promise((r) => setTimeout(r, ms)); }
     console.log('GET /pdf.js ->', pdfJs.status);
     if (pdfJs.status !== 200) failed = true;
 
+    const logoJs = await req('GET', '/logo.js');
+    console.log('GET /logo.js ->', logoJs.status);
+    if (logoJs.status !== 200) failed = true;
+
     const jspdfLib = await req('GET', '/vendor/jspdf.umd.min.js');
     console.log('GET /vendor/jspdf.umd.min.js ->', jspdfLib.status, `(${jspdfLib.body.length} bytes)`);
     if (jspdfLib.status !== 200 || jspdfLib.body.length < 1000) failed = true;
