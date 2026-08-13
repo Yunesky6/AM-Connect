@@ -125,7 +125,20 @@ function goHome() {
   headerTitle.textContent = 'AM Connect';
   renderQueue();
 }
-backBtn.addEventListener('click', goHome);
+
+// ---------- Back navigation (in-app button + phone back gesture/button) ----------
+// A form open pushes a history entry; the phone's native back gesture/button
+// (and our own back arrow) both just call history.back(), and this single
+// popstate listener is what actually updates the UI. That way both paths
+// stay in sync instead of fighting each other.
+history.replaceState({ view: 'home' }, '');
+window.addEventListener('popstate', () => {
+  if (currentForm) goHome();
+});
+function leaveForm() {
+  if (currentForm) history.back();
+}
+backBtn.addEventListener('click', leaveForm);
 
 // ---------- Field rendering ----------
 function fieldHtml(field) {
@@ -352,6 +365,7 @@ async function openForm(id) {
   formFooter.classList.add('show');
   headerTitle.textContent = formDef.title;
   window.scrollTo(0, 0);
+  history.pushState({ view: 'form', formId: id }, '');
 }
 
 // ---------- Data collection ----------
@@ -555,7 +569,7 @@ document.getElementById('submitBtn').addEventListener('click', async () => {
       if (res.ok) {
         toast('Submitted');
         await resetForm(currentForm);
-        goHome();
+        leaveForm();
         return;
       }
       throw new Error('bad response');
@@ -568,7 +582,7 @@ document.getElementById('submitBtn').addEventListener('click', async () => {
   await setQueue(q);
   toast('Offline — saved and will sync automatically');
   await resetForm(currentForm);
-  goHome();
+  leaveForm();
 });
 
 // ---------- Init ----------

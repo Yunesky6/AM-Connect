@@ -1,4 +1,4 @@
-const CACHE_NAME = 'am-connect-v9';
+const CACHE_NAME = 'am-connect-v10';
 const APP_SHELL = [
   '/',
   '/index.html',

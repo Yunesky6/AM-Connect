@@ -5,6 +5,10 @@
 // Walks the same form definition (public/forms.js) used to render the form,
 // so any new form added there gets a matching PDF automatically.
 
+const BRAND_BLUE = [0, 85, 165];
+const BRAND_YELLOW = [255, 224, 0];
+const BRAND_DARK = [30, 30, 30];
+
 function checkColor(val) {
   if (val === 'pass') return [22, 163, 74];   // green
   if (val === 'fail') return [220, 38, 38];   // red
@@ -18,7 +22,10 @@ function checkLabel(val) {
 }
 
 function fieldLabelFor(field) {
-  return field.label || field.name;
+  // An explicit empty label (e.g. a textarea directly under a section
+  // heading that already provides context) should stay unlabeled in the
+  // PDF too — only fall back to the field name when label is unset entirely.
+  return field.label !== undefined ? field.label : field.name;
 }
 
 // Flattens a form's sections/fields into a simple list of {label, value} rows,
@@ -38,37 +45,69 @@ function generatePDF(formDef, data) {
     }
   }
 
-  // Header — company logo top-left, form title top-right
-  let headerBottom = y;
+  // Header — logo top-left, centered bold title block below it (mirrors the
+  // original paper form's layout: small logo, big centered title, subtitle).
+  let logoBottom = y;
   if (typeof AURORA_LOGO_DATA_URI !== 'undefined') {
-    const logoW = 110;
+    const logoW = 100;
     const logoH = logoW / AURORA_LOGO_ASPECT;
     try {
       doc.addImage(AURORA_LOGO_DATA_URI, 'PNG', margin, y - 14, logoW, logoH);
-      headerBottom = Math.max(headerBottom, y - 14 + logoH);
+      logoBottom = y - 14 + logoH;
     } catch (e) { /* fall back silently if the logo fails to embed */ }
   }
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(12);
-  doc.setTextColor(80, 80, 80);
-  doc.text(formDef.title, pageWidth - margin, y, { align: 'right' });
-  y = headerBottom + 10;
-  doc.setDrawColor(200, 200, 200);
+  y = logoBottom + 18;
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(15);
+  doc.setTextColor(...BRAND_DARK);
+  doc.text(formDef.title, pageWidth / 2, y, { align: 'center' });
+  y += 16;
+
+  if (formDef.subtitle) {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9.5);
+    doc.setTextColor(110, 110, 110);
+    doc.text(formDef.subtitle, pageWidth / 2, y, { align: 'center' });
+    y += 14;
+  }
+
+  y += 6;
+  doc.setDrawColor(...BRAND_BLUE);
+  doc.setLineWidth(1.2);
   doc.line(margin, y, pageWidth - margin, y);
-  y += 20;
+  doc.setLineWidth(0.75);
+  y += 16;
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
   doc.setTextColor(120, 120, 120);
   doc.text(`Submitted: ${new Date(data.submittedAt || Date.now()).toLocaleString()}`, margin, y);
-  y += 22;
+  y += 20;
 
-  // Walk sections
+  // Walk sections, drawing a yellow group-header bar whenever a section's
+  // `group` (see forms.js) differs from the previous one.
+  let lastGroup = null;
   formDef.sections.forEach((section) => {
+    if (section.group && section.group !== lastGroup) {
+      ensureSpace(34);
+      const barH = 20;
+      doc.setFillColor(...BRAND_YELLOW);
+      doc.rect(margin, y, pageWidth - margin * 2, barH, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      doc.setTextColor(...BRAND_DARK);
+      doc.text(section.group.toUpperCase(), pageWidth / 2, y + barH / 2 + 3.5, { align: 'center' });
+      y += barH + 14;
+      lastGroup = section.group;
+    } else if (!section.group) {
+      lastGroup = null;
+    }
+
     ensureSpace(40);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(12);
-    doc.setTextColor(26, 58, 94);
+    doc.setTextColor(...BRAND_BLUE);
     doc.text(section.heading, margin, y);
     y += 16;
 

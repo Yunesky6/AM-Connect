@@ -22,7 +22,12 @@
 //   row        { type:'row', fields: [ ...two or more of the above... ] }
 //                 -> lays fields out side by side
 //
-// Each form = { id, title, subtitle, icon, sections: [ { heading, fields: [...] }, ... ] }
+// Each form = { id, title, subtitle, icon, sections: [ { heading, group, fields: [...] }, ... ] }
+//
+// `group` is optional. Consecutive sections sharing the same group string get
+// a colored group-header bar in the generated PDF (matching a paper form's
+// major category dividers, e.g. "Cooling System Startup" vs "Electric Heat
+// Operation") — it has no effect on the in-app form itself.
 // ---------------------------------------------------------------------------
 
 const FORMS = [
@@ -156,6 +161,7 @@ const FORMS = [
       },
       {
         heading: 'Cooling — Pre-Startup',
+        group: 'Cooling System Startup',
         fields: [
           { type: 'checkgroup', name: 'preStartup', items: [
             'Unit installed level and secured',
@@ -171,6 +177,7 @@ const FORMS = [
       },
       {
         heading: 'Water Loop (Cooling Only)',
+        group: 'Cooling System Startup',
         fields: [
           { type: 'checkgroup', name: 'waterLoop', items: [
             'Supply and return valves open',
@@ -184,6 +191,7 @@ const FORMS = [
       },
       {
         heading: 'Electrical',
+        group: 'Cooling System Startup',
         fields: [
           { type: 'checkgroup', name: 'electrical', items: [
             'Main power ON',
@@ -196,6 +204,7 @@ const FORMS = [
       },
       {
         heading: 'Startup & Operation — Cooling',
+        group: 'Cooling System Startup',
         fields: [
           { type: 'checkgroup', name: 'coolingStartup', items: [
             'Thermostat calling for cooling',
@@ -208,6 +217,7 @@ const FORMS = [
       },
       {
         heading: 'Air Distribution',
+        group: 'Cooling System Startup',
         fields: [
           { type: 'checkgroup', name: 'airDistribution', items: [
             'Airflow present at all supply grilles',
@@ -219,6 +229,7 @@ const FORMS = [
       },
       {
         heading: 'Performance Check — Cooling',
+        group: 'Cooling System Startup',
         fields: [
           { type: 'row', fields: [
             { type: 'number', name: 'coolingReturnAirTemp', label: 'Return Air Temp (°F)', step: '0.1' },
@@ -237,6 +248,7 @@ const FORMS = [
       },
       {
         heading: 'Startup & Operation — Electric Heat',
+        group: 'Electric Heat Operation',
         fields: [
           { type: 'checkgroup', name: 'heatStartup', items: [
             'Thermostat calling for heat',
@@ -249,6 +261,7 @@ const FORMS = [
       },
       {
         heading: 'Performance Check — Electric Heat',
+        group: 'Electric Heat Operation',
         fields: [
           { type: 'row', fields: [
             { type: 'number', name: 'heatReturnAirTemp', label: 'Return Air Temp (°F)', step: '0.1' },
@@ -263,6 +276,7 @@ const FORMS = [
       },
       {
         heading: 'Electric Heat Safeties',
+        group: 'Electric Heat Operation',
         fields: [
           { type: 'checkgroup', name: 'heatSafeties', items: [
             'High-limit protection verified',
@@ -273,6 +287,7 @@ const FORMS = [
       },
       {
         heading: 'Final',
+        group: 'Electric Heat Operation',
         fields: [
           { type: 'checkgroup', name: 'final', items: [
             'Unit switches correctly between cooling and electric heat',
