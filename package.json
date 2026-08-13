@@ -1,0 +1,12 @@
+{
+  "name": "am-connect",
+  "version": "1.0.0",
+  "description": "AM Connect (Aurora Mechanical Connect) — offline-capable HVAC checklist app (PWA frontend + Express backend)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
